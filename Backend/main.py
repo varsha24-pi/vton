@@ -6,10 +6,8 @@ import cloudinary.uploader
 import os
 import tempfile
 from dotenv import load_dotenv
-
 load_dotenv()
 
-# Configure Cloudinary (free image hosting)
 cloudinary.config(
     cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
     api_key=os.getenv("CLOUDINARY_API_KEY"),
@@ -17,7 +15,6 @@ cloudinary.config(
 )
 
 app = FastAPI(title="Virtual Try-On API")
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -37,7 +34,6 @@ async def try_on(
     garment_description: str = "clothing item"
 ):
     try:
-        # Save uploaded files temporarily
         with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as person_tmp:
             person_tmp.write(await person_image.read())
             person_path = person_tmp.name
@@ -46,28 +42,24 @@ async def try_on(
             garment_tmp.write(await garment_image.read())
             garment_path = garment_tmp.name
 
-        # Call Hugging Face IDM-VTON Space (free, no API key needed)
-        client = Client("yisol/IDM-VTON")
-
+        client = Client("franciszzj/Leffa", token=os.getenv("HF_TOKEN"))
         result = client.predict(
-            dict({"background": handle_file(person_path), "layers": [], "composite": None}),
+            handle_file(person_path),
             handle_file(garment_path),
-            garment_description,   # garment description
-            True,                  # is_checked
-            True,                  # is_checked_crop
-            30,                    # denoise steps (higher = better quality, slower)
-            42,                    # seed
-            api_name="/tryon"
+            False,
+            30,
+            2.5,
+            42,
+            "viton_hd",
+            "upper_body",
+            False,
+            api_name="/leffa_predict_vt"
         )
 
-        # result[0] is the output image path on HF's server
         output_image_path = result[0]
-
-        # Upload result to Cloudinary so we can return a permanent URL
         upload_response = cloudinary.uploader.upload(output_image_path)
         result_url = upload_response["secure_url"]
 
-        # Cleanup temp files
         os.unlink(person_path)
         os.unlink(garment_path)
 
