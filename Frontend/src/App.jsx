@@ -38,7 +38,7 @@ export default function App() {
     formData.append("garment_description", "stylish clothing item");
 
     try {
-      const res = await fetch("http://localhost:8000/try-on", {
+      const res = await fetch("https://vton-2dhr.onrender.com/try-on", {
         method: "POST",
         body: formData,
       });
